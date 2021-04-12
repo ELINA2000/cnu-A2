@@ -88,7 +88,8 @@
 # 
 # Assume the minimum number of points $N_{p}$ required to find an approximation $(1)$ is N and it is at least $p$th order accurate.
 # $$
-#   F \left( x + \beta_1  \Delta x \right) = F \left( x \right) + \beta_1  \Delta x F' \left( x \right) + \frac{ \beta_1 \Delta x^2}{2} F'' \left( x \right) + \frac{ \beta_1 \Delta x^3}{6} F'''\left(x\right) + \dots$$
+#   F \left( x + \beta_1  \Delta x \right) = F \left( x \right) + \beta_1  \Delta x F' \left( x \right) + \frac{ \beta_1 \Delta x^2}{2} F'' \left( x \right) + \frac{ \beta_1 \Delta x^3}{6} F'''\left(x\right) + \dots
+# $$
 # 
 # $$ F \left( x + \beta_2  \Delta x \right) = F \left( x \right) + \beta_2  \Delta x F' \left( x \right) + \frac{ \beta_2 \Delta x^2}{2} F'' \left( x \right) + \frac{ \beta_2 \Delta x^3}{6} F'''\left(x\right) + \dots
 # $$
@@ -248,9 +249,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-a0 = np.linspace(-5, 5, 211)
-b0 = np.linspace(-5, 5, 211)
-cat =complex_newton(-5, 5, -5, 5, 0, 211, 1e-10, 1)
+a0 = np.linspace(-5, 5, 215)
+b0 = np.linspace(-5, 5, 215)
+cat =complex_newton(-5, 5, -5, 5, 0, 215, 1e-10, 1)
 print (cat)
     
 cat = pd.DataFrame(cat, columns = a0, index = b0)
@@ -375,29 +376,60 @@ print(f'If I =0.5, the value at resting state is {resting_state(0.2, 0.2, 0.5,0.
 # **[7 marks]**
 
 # %%
-# Define the initial parameters
-delta_t = 0.01
-t = np.linspace(0,100,int(100/delta_t))
-x = np.zeros([2,len(t)])
-x[:, 0] = np.array([0.8, 0.8])
-# Compute the numericai solution by using forward Euler method
-I = 0.0
-for i in range(len(t)-1): 
-    x[:, i+1] = x[:, i] + delta_t * f(x[:, i], I)
-u = x[0, :]
-v = x[1, :]
-
-#plot the required figures
-plt.plot(t, u, '-', label = 'u(t)')
-plt.plot(t, v, '-', label = 'v(t)')
-#The legend is located at upper right of the plot 
-plt.legend( loc=1)
-#Display the name for axis x and y 
-plt.xlabel( 't')
-plt.ylabel( 'value')
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+fig_1, ax_1 = plt.subplots(3, figsize = (15,15))
+#Define the condition
+t0 = 0
+t1 = 100
+N = 1000
+x = np.linspace(t0, t1, N)
+#Define the value i = 0
+I=0
+def f(u, v, I):
+        return 1. / eps * (u - u ** 3 / 3 - v + I)
+def g(u, v, gamma):
+        return  (u - gamma * v + beta) * eps
+def F1(t, y):
+    return f(y[0],y[1],0),g(y[0],y[1],0)
+#Find the solution
+u_1 = solve_ivp(F1,[t0, t1], [0.8,0.8], method = 'RK45', t_eval = np.linspace(t0,t1,N))
+y_U1 = u_1.y[0]
+y_V1 = u_1.y[1]
+# Plot the functions
+ax_1[0].plot(x, y_U1, label = r'U_n')
+ax_1[0].plot(x, y_V1, label = r'V_n')
+ax_1[0].legend(loc = 'lower right', fontsize = 8)
+# Label the x-axis and y-axis
+ax_1[0].set_xlabel("time", fontsize = 10)
+ax_1[0].set_ylabel("value", fontsize = 10)
 # Set the title
-plt.title('graph of u(t) and v(t) when I = 0')
-plt.show()
+ax_1[0].set_title("I=0", fontsize = 10)
+#Define the value i = 0.5
+I=0.5
+def F2(t,y):
+    return f(y[0],y[1], 0.5),g(y[0],y[1], 0.5)
+#Find the solution
+v_1 = solve_ivp(F2,[t0, t1], [0.8,0.8], method = 'RK45', t_eval = np.linspace(t0,t1,N))
+y_U2 = v_1.y[0]
+y_V2 = v_1.y[1]
+# Plot the functions
+ax_1[1].plot(x, y_U2, label = r'U_n')
+ax_1[1].plot(x, y_V2, label = r'V_n')
+ax_1[1].legend(loc = 'lower right', fontsize = 8)
+ax_1[1].set_xlabel("time", fontsize = 12)
+ax_1[1].set_ylabel("value", fontsize = 12)
+ax_1[1].set_title("I=0.5", fontsize = 12)
+# Plot the functions
+ax_1[2].plot(y_U1, y_V1, label = r'U_n')
+ax_1[2].plot(y_U2, y_V1, label = r'V_n')
+ax_1[2].legend(loc = 'lower right', fontsize = 8)
+# Label the x-axis and y-axis
+ax_1[2].set_xlabel("time", fontsize = 12)
+ax_1[2].set_ylabel("value", fontsize = 12)
+# Set the title
+ax_1[2].set_title("I=0.5", fontsize = 12)
 
 # %% [markdown]
 # ***📝 Discussion for question 3.2***
@@ -422,6 +454,15 @@ plt.show()
 # %%
 import numpy as np
 
+def Jac(u, v, gamma):
+        #Initialize J
+        J = np.zeros([2,2])
+        #Define the jacobian matrix
+        J[0, 0] = 1. / eps * (1 - u ** 2)
+        J[1, 0] = eps
+        J[0, 1] = -(1./eps)
+        J[1, 1] = -eps * gamma
+        return J
 # Case 1: I = 0
 uv_1 = resting_state(0.2, 0.2, 0, 0.8)
 j_1 = Jac(uv_1[0], uv_1[1], 0.8)
